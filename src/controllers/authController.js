@@ -124,7 +124,12 @@ res.cookie('Authorization', 'Bearer ' + token, {
 });
 
 }catch(error){
-    console.log(error);
+    console.log("Signin error:", error);
+    return res.status(500).json({
+        success: false,
+        message: "Internal server error during signin",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
 } 
 };
 
