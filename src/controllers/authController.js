@@ -107,7 +107,7 @@ try{
         email: existingUser.email,
         verified: existingUser.verified,
     },
-    process.env.TOKEN_SECRET,
+    config.TOKEN_SECRET,
     {
         expiresIn:'8h',
     }
@@ -115,8 +115,8 @@ try{
 
 res.cookie('Authorization', 'Bearer ' + token, {
     expires: new Date(Date.now() + 8 * 3600000), 
-    httpOnly: process.env.NODE_ENV ==='production',
-    secure:process.env.NODE_ENV ==='production'
+    httpOnly: config.NODE_ENV ==='production',
+    secure: config.NODE_ENV ==='production'
 })
 .json({
     success: true,
@@ -129,7 +129,7 @@ res.cookie('Authorization', 'Bearer ' + token, {
     return res.status(500).json({
         success: false,
         message: "Internal server error during signin",
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: config.NODE_ENV === 'development' ? error.message : undefined
     });
 } 
 };
@@ -164,7 +164,7 @@ exports.sendVerificationCode = async (req, res) => {
 
   
       let info = await transport.sendMail({
-        from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
+        from: config.NODE_CODE_SENDING_EMAIL_ADDRESS, // Use config instead of process.env
         to: existingUser.email,
         subject: "Verification Code",
         html: `<h1>${codeValue}</h1>`,
@@ -173,7 +173,7 @@ exports.sendVerificationCode = async (req, res) => {
       if (info.accepted[0] === existingUser.email) {
         const hashedCodeValue = hmacProcess(
           codeValue,
-          process.env.HMAC_VERIFICATION_CODE_SECRET
+          config.HMAC_VERIFICATION_CODE_SECRET // Use config instead of process.env
         );
         existingUser.verificationCode = hashedCodeValue;
         existingUser.verificationCodeValidation = Date.now();
@@ -233,7 +233,7 @@ exports.sendVerificationCode = async (req, res) => {
   
       const hashedProvidedOtp = hmacProcess(
         String(otp).trim(),
-        process.env.HMAC_VERIFICATION_CODE_SECRET
+        config.HMAC_VERIFICATION_CODE_SECRET
       );
   
       if (hashedProvidedOtp !== existingUser.verificationCode) {
