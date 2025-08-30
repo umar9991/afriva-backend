@@ -6,11 +6,17 @@ const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const productRoutes = require("./routes/productRoutes");
 const authRoutes = require("./routes/authRoutes");
+const config = require("./config/environment");
 
 const app = express();
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || ["http://localhost:5173", "http://localhost:3000"],
+  origin: config.FRONTEND_URL || [
+    "http://localhost:5173", 
+    "http://localhost:3000",
+    "https://afriva-frontend.vercel.app",
+    "https://afriva-frontend-git-main.vercel.app"
+  ],
   methods: ["GET", "PATCH", "POST", "PUT", "DELETE"],
   credentials: true
 }));
@@ -22,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const connectDB = async () => {
   try {
-    const mongoURL = process.env.MONGO_URL;
+    const mongoURL = config.MONGO_URL;
     if (!mongoURL) {
       console.warn('⚠️ MONGO_URL environment variable is not set - database connection will be skipped');
       return; 
@@ -33,7 +39,7 @@ const connectDB = async () => {
     console.log("✅ Database Connected Successfully");
   } catch (err) {
     console.error("❌ Database Connection Error:", err.message);
-    if (process.env.NODE_ENV === 'development') {
+    if (config.NODE_ENV === 'development') {
       process.exit(1);
     }
   }
@@ -50,7 +56,7 @@ app.get('/', (req, res) => {
     message: 'Hello from the server',
     status: 'running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: config.NODE_ENV
   }); 
 });
 
@@ -70,12 +76,12 @@ app.use((req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 8000;
+const PORT = config.PORT;
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`📍 Environment: ${config.NODE_ENV}`);
+  console.log(`🌐 Frontend URL: ${Array.isArray(config.FRONTEND_URL) ? config.FRONTEND_URL.join(', ') : config.FRONTEND_URL}`);
 });
 
 process.on('SIGTERM', () => {
