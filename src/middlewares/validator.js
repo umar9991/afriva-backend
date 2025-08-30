@@ -7,7 +7,7 @@ exports.signupSchema = Joi.object({
     .email({ 
      tlds: { allow: ['com', 'net', 'org', 'in','edu' , 'pk'] } }),
     password: Joi.string()
-    .min(3)  
+    .min(8)  // Increased from 3 to 8 for security
     .max(50) 
     .required(),
     

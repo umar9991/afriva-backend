@@ -8,14 +8,15 @@ const config = {
   
   // Email
   NODE_CODE_SENDING_EMAIL_ADDRESS: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
+  NODE_CODE_SENDING_EMAIL_PASSWORD: process.env.NODE_CODE_SENDING_EMAIL_PASSWORD,
   HMAC_VERIFICATION_CODE_SECRET: process.env.HMAC_VERIFICATION_CODE_SECRET || 'your-hmac-secret-change-in-production',
   
   // Frontend URLs
   FRONTEND_URL: process.env.FRONTEND_URL || [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://afriva-frontend.vercel.app",
-    "https://afriva-frontend-git-main.vercel.app"
+    "https://afriva-frontend.vercel.app", // Remove trailing slash
+    "https://afriva-frontend-git-main-umar-ahmads-projects-36ca04f7.vercel.app" // Add https://
   ],
   
   // Environment

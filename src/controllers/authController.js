@@ -3,6 +3,7 @@ const { signupSchema, signinSchema } = require("../middlewares/validator");
 const User = require("../models/userModels");
 const { doHash, doHashValidaton, hmacProcess } = require("../utils/hashing");
 const transport = require('../middlewares/sendMail');
+const config = require('../config/environment');
 
 exports.signup = async (req, res) => {
   console.log("in signup======>",req.body);
@@ -70,7 +71,7 @@ console.log("existingUser====>",existingUser);
         res.status(500).json({
             success: false,
             message: "Internal server error",
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: config.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
