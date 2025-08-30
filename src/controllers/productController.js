@@ -9,7 +9,6 @@ exports.getProducts = async (req, res) => {
     }
   };
   
-  // Create a new product
   exports.createProduct = async (req, res) => {
     try {
       const { name, image, price, rating } = req.body;

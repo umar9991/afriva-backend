@@ -7,9 +7,16 @@ exports.signupSchema = Joi.object({
     .email({ 
      tlds: { allow: ['com', 'net', 'org', 'in','edu' , 'pk'] } }),
     password: Joi.string()
-    .min(8).required()
-    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$'))
+    .min(3)  
+    .max(50) 
+    .required(),
     
+    confirmPassword: Joi.string()
+    .valid(Joi.ref('password'))
+    .required()
+    .messages({
+        'any.only': 'Passwords must match'
+    })
 });
 
 exports.signinSchema = Joi.object({
@@ -19,7 +26,7 @@ exports.signinSchema = Joi.object({
     .email({ 
      tlds: { allow: ['com', 'net', 'org', 'in', 'edu' , 'pk'] } }),
     password: Joi.string()
-    .min(8).required()
-    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$'))
-    
+    .min(3)  
+    .max(50) 
+    .required()
 });

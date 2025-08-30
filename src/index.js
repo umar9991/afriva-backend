@@ -9,7 +9,6 @@ const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
-// CORS configuration - simplified for better compatibility
 app.use(cors({
   origin: process.env.FRONTEND_URL || ["http://localhost:5173", "http://localhost:3000"],
   methods: ["GET", "PATCH", "POST", "PUT", "DELETE"],
@@ -26,7 +25,7 @@ const connectDB = async () => {
     const mongoURL = process.env.MONGO_URL;
     if (!mongoURL) {
       console.warn('⚠️ MONGO_URL environment variable is not set - database connection will be skipped');
-      return; // Don't exit in production, just skip DB connection
+      return; 
     }
     
     console.log("Connecting to database...");
@@ -34,7 +33,6 @@ const connectDB = async () => {
     console.log("✅ Database Connected Successfully");
   } catch (err) {
     console.error("❌ Database Connection Error:", err.message);
-    // In production, don't exit the process, just log the error
     if (process.env.NODE_ENV === 'development') {
       process.exit(1);
     }
@@ -47,7 +45,6 @@ connectDB();
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 
-// Root route for health check
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Hello from the server',
@@ -57,7 +54,6 @@ app.get('/', (req, res) => {
   }); 
 });
 
-// Catch-all route for any unmatched requests - using proper Express pattern
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -82,7 +78,6 @@ const server = app.listen(PORT, () => {
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
 });
 
-// Graceful shutdown handlers
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
   server.close(() => {
