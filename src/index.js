@@ -11,12 +11,7 @@ const config = require("./config/environment");
 const app = express();
 
 app.use(cors({
-  origin: config.FRONTEND_URL || [
-    "http://localhost:5173", 
-    "http://localhost:3000",
-    "https://afriva-frontend.vercel.app", 
-    "https://afriva-frontend-git-main-umar-ahmads-projects-36ca04f7.vercel.app" 
-  ],
+  origin: config.FRONTEND_URL,
   methods: ["GET", "PATCH", "POST", "PUT", "DELETE"],
   credentials: true
 }));
