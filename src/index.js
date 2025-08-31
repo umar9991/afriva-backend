@@ -47,6 +47,13 @@ connectDB();
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 
+// Debug: Log all registered routes
+app._router.stack.forEach(function(r){
+  if (r.route && r.route.path){
+    console.log('🛣️ Route registered:', r.route.stack[0].method.toUpperCase(), r.route.path);
+  }
+});
+
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Hello from the server',
