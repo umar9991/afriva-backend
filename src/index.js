@@ -11,9 +11,10 @@ const config = require("./config/environment");
 const app = express();
 
 app.use(cors({
-  origin: config.FRONTEND_URL,
+  origin: true,
   methods: ["GET", "PATCH", "POST", "PUT", "DELETE"],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 
 app.use(helmet());
