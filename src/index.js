@@ -35,24 +35,27 @@ const connectDB = async () => {
     console.log("✅ Database Connected Successfully");
   } catch (err) {
     console.error("❌ Database Connection Error:", err.message);
-    if (config.NODE_ENV === 'development') {
-      process.exit(1);
-    }
+    // Don't crash the server, just log the error
+    console.warn("⚠️ Continuing without database connection...");
   }
 };
+
+// Add error handling for uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+  console.warn('⚠️ Server continuing...');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  console.warn('⚠️ Server continuing...');
+});
 
 connectDB();
 
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
-
-// Debug: Log all registered routes
-app._router.stack.forEach(function(r){
-  if (r.route && r.route.path){
-    console.log('🛣️ Route registered:', r.route.stack[0].method.toUpperCase(), r.route.path);
-  }
-});
 
 app.get('/', (req, res) => {
   res.json({ 
