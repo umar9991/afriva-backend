@@ -244,7 +244,7 @@ exports.sendVerificationCode = async (req, res) => {
       );
       existingUser.verificationCode = hashedCodeValue;
       existingUser.verificationCodeValidation = Date.now();
-      await existingUser.save();
+      await existingUser.save(); 
 
       console.log('✅ Verification code saved for user:', existingUser.email);
       
