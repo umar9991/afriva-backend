@@ -51,6 +51,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.warn('⚠️ Server continuing...');
 });
 
+// Connect to database
 connectDB();
 
 // Routes
@@ -62,7 +63,8 @@ app.get('/', (req, res) => {
     message: 'Hello from the server',
     status: 'running',
     timestamp: new Date().toISOString(),
-    environment: config.NODE_ENV
+    environment: config.NODE_ENV,
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   }); 
 });
 
@@ -82,26 +84,32 @@ app.use((req, res) => {
   });
 });
 
-const PORT = config.PORT;
+// For Vercel deployment - export the app
+module.exports = app;
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${config.NODE_ENV}`);
-  console.log(`🌐 Frontend URL: ${Array.isArray(config.FRONTEND_URL) ? config.FRONTEND_URL.join(', ') : config.FRONTEND_URL}`);
-});
-
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('Process terminated');
-    process.exit(0);
+// Only start server if not on Vercel (for local development)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  const PORT = config.PORT || 8000;
+  
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📍 Environment: ${config.NODE_ENV}`);
+    console.log(`🌐 Frontend URL: ${Array.isArray(config.FRONTEND_URL) ? config.FRONTEND_URL.join(', ') : config.FRONTEND_URL}`);
   });
-});
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
-  server.close(() => {
-    console.log('Process terminated');
-    process.exit(0);
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      console.log('Process terminated');
+      process.exit(0);
+    });
   });
-});
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully');
+    server.close(() => {
+      console.log('Process terminated');
+      process.exit(0);
+    });
+  });
+}
