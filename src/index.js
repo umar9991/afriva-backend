@@ -23,6 +23,8 @@ app.use(cors({
       'https://afriva-frontend-git-main-umar-ahmads-projects-36ca04f7.vercel.app'
     ];
     
+    console.log('CORS check for origin:', origin);
+    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -32,7 +34,8 @@ app.use(cors({
   },
   methods: ["GET", "PATCH", "POST", "PUT", "DELETE"],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 app.use(helmet());
@@ -90,6 +93,12 @@ app.get('/', (req, res) => {
     environment: config.NODE_ENV,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     cors: 'enabled',
+    allowedOrigins: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://afriva-frontend.vercel.app',
+      'https://afriva-frontend-git-main-umar-ahmads-projects-36ca04f7.vercel.app'
+    ],
     endpoints: {
       auth: '/api/auth',
       products: '/api/products'
@@ -133,7 +142,13 @@ app.use((err, req, res, next) => {
     return res.status(403).json({
       success: false,
       message: 'CORS error: Origin not allowed',
-      origin: req.get('Origin')
+      origin: req.get('Origin'),
+      allowedOrigins: [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://afriva-frontend.vercel.app',
+        'https://afriva-frontend-git-main-umar-ahmads-projects-36ca04f7.vercel.app'
+      ]
     });
   }
   
