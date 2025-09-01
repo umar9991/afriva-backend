@@ -1,11 +1,19 @@
-    const nodemailer = require('nodemailer')
+const nodemailer = require('nodemailer');
+const config = require('../config/environment');
 
-    const transport = nodemailer.createTransport({
-        service:'gmail',
-        auth:{
-            user:process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
-            pass:process.env.NODE_CODE_SENDING_EMAIL_PASSWORD,
+// Create transport only if email credentials are available
+let transport = null;
 
-        },
-    });
-    module.exports = transport;
+if (config.NODE_CODE_SENDING_EMAIL_ADDRESS && config.NODE_CODE_SENDING_EMAIL_PASSWORD) {
+  transport = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: config.NODE_CODE_SENDING_EMAIL_ADDRESS,
+      pass: config.NODE_CODE_SENDING_EMAIL_PASSWORD,
+    },
+  });
+} else {
+  console.warn('Email credentials not configured - email functionality disabled');
+}
+
+module.exports = transport;
