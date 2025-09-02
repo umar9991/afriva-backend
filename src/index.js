@@ -10,10 +10,8 @@ const config = require("./config/environment");
 
 const app = express();
 
-// Improved CORS configuration
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
@@ -43,7 +41,6 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Add request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('Origin')}`);
   next();
@@ -53,21 +50,52 @@ const connectDB = async () => {
   try {
     const mongoURL = config.MONGO_URL;
     if (!mongoURL) {
-      console.warn('⚠️ MONGO_URL environment variable is not set - database connection will be skipped');
+      console.error('❌ MONGO_URL environment variable is not set!');
+      console.error('❌ Please set MONGO_URL in your Vercel environment variables');
+      console.error('❌ Example: mongodb+srv://username:password@cluster.mongodb.net/afriva');
       return; 
     }
     
-    console.log("Connecting to database...");
-    await mongoose.connect(mongoURL);
+    console.log("🔌 Connecting to database...");
+    console.log("🔌 MongoDB URL:", mongoURL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials
+    
+    const connectionOptions = {
+      serverSelectionTimeoutMS: 15000, 
+      socketTimeoutMS: 45000,
+      bufferCommands: false, 
+      bufferMaxEntries: 0, 
+      maxPoolSize: 10, 
+      minPoolSize: 1, 
+      maxIdleTimeMS: 30000, 
+      connectTimeoutMS: 15000, 
+      retryWrites: true,
+      w: 'majority' // Write concern
+    };
+    
+    await mongoose.connect(mongoURL, connectionOptions);
     console.log("✅ Database Connected Successfully");
+    
+    // Add connection event listeners
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ MongoDB connection error:', err);
+    });
+    
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️ MongoDB disconnected');
+    });
+    
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
+    });
+    
   } catch (err) {
     console.error("❌ Database Connection Error:", err.message);
-    // Don't crash the server, just log the error
+    console.error("❌ Full error:", err);
+    console.error("❌ Please check your MONGO_URL and MongoDB Atlas settings");
     console.warn("⚠️ Continuing without database connection...");
   }
 };
 
-// Add error handling for uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
   console.warn('⚠️ Server continuing...');
@@ -78,7 +106,6 @@ process.on('unhandledRejection', (reason, promise) => {
   console.warn('⚠️ Server continuing...');
 });
 
-// Connect to database
 connectDB();
 
 // Routes
@@ -86,12 +113,26 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 
 app.get('/', (req, res) => {
+  const dbStatus = mongoose.connection.readyState;
+  const dbStatusText = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  }[dbStatus] || 'unknown';
+  
   res.json({ 
     message: 'Hello from the server',
     status: 'running',
     timestamp: new Date().toISOString(),
     environment: config.NODE_ENV,
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    database: {
+      status: dbStatusText,
+      readyState: dbStatus,
+      connected: dbStatus === 1,
+      host: mongoose.connection.host || 'unknown',
+      name: mongoose.connection.name || 'unknown'
+    },
     cors: 'enabled',
     allowedOrigins: [
       'http://localhost:5173',
@@ -102,18 +143,40 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       products: '/api/products'
+    },
+    environment_variables: {
+      MONGO_URL: config.MONGO_URL ? 'Set' : 'Not Set',
+      NODE_ENV: config.NODE_ENV,
+      TOKEN_SECRET: config.TOKEN_SECRET ? 'Set' : 'Not Set'
     }
   }); 
 });
 
-// Health check endpoint
 app.get('/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState;
+  const dbStatusText = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  }[dbStatus] || 'unknown';
+  
   res.json({
-    status: 'healthy',
+    status: dbStatus === 1 ? 'healthy' : 'unhealthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    database: {
+      status: dbStatusText,
+      readyState: dbStatus,
+      connected: dbStatus === 1,
+      host: mongoose.connection.host || 'unknown',
+      name: mongoose.connection.name || 'unknown'
+    },
+    environment: {
+      NODE_ENV: config.NODE_ENV,
+      MONGO_URL: config.MONGO_URL ? 'Set' : 'Not Set'
+    }
   });
 });
 

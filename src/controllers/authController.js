@@ -4,9 +4,19 @@ const User = require("../models/userModels");
 const { doHash, doHashValidaton, hmacProcess } = require("../utils/hashing");
 const transport = require('../middlewares/sendMail');
 const config = require('../config/environment');
+const mongoose = require('mongoose');
 
 exports.signup = async (req, res) => {
   console.log("in signup======>", req.body);
+  
+  // Check if database is connected
+  if (mongoose.connection.readyState !== 1) {
+    console.error("❌ Database not connected. ReadyState:", mongoose.connection.readyState);
+    return res.status(503).json({
+      success: false,
+      message: "Database connection not available. Please try again later.",
+    });
+  }
   
   try {
     const { error, value } = signupSchema.validate(req.body);
@@ -83,6 +93,15 @@ exports.signin = async (req, res) => {
   const { email, password } = req.body;
   
   console.log('🔐 Signin Request:', { email });
+  
+  // Check if database is connected
+  if (mongoose.connection.readyState !== 1) {
+    console.error("❌ Database not connected. ReadyState:", mongoose.connection.readyState);
+    return res.status(503).json({
+      success: false,
+      message: "Database connection not available. Please try again later.",
+    });
+  }
   
   try {
     const { error, value } = signinSchema.validate({ email, password });
@@ -185,6 +204,15 @@ exports.sendVerificationCode = async (req, res) => {
   
   console.log('📧 Send Verification Code Request:', { email });
   
+  // Check if database is connected
+  if (mongoose.connection.readyState !== 1) {
+    console.error("❌ Database not connected. ReadyState:", mongoose.connection.readyState);
+    return res.status(503).json({
+      success: false,
+      message: "Database connection not available. Please try again later.",
+    });
+  }
+  
   try {
     const existingUser = await User.findOne({ 
       email: { $regex: new RegExp(`^${email}$`, 'i') }
@@ -272,6 +300,15 @@ exports.verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
   
   console.log('🔍 OTP Verification Request:', { email, otp });
+
+  // Check if database is connected
+  if (mongoose.connection.readyState !== 1) {
+    console.error("❌ Database not connected. ReadyState:", mongoose.connection.readyState);
+    return res.status(503).json({
+      success: false,
+      message: "Database connection not available. Please try again later.",
+    });
+  }
 
   try {
     const existingUser = await User.findOne({ 
