@@ -59,7 +59,6 @@ const connectDB = async () => {
     console.log("🔌 Connecting to database...");
     console.log("🔌 MongoDB URL:", mongoURL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials
     
-    // Parse the connection string to check format
     try {
       const url = new URL(mongoURL);
       console.log("🔌 Connection string parsed successfully:");
