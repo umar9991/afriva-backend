@@ -59,6 +59,21 @@ const connectDB = async () => {
     console.log("🔌 Connecting to database...");
     console.log("🔌 MongoDB URL:", mongoURL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials
     
+    // Parse the connection string to check format
+    try {
+      const url = new URL(mongoURL);
+      console.log("🔌 Connection string parsed successfully:");
+      console.log("🔌 Protocol:", url.protocol);
+      console.log("🔌 Host:", url.hostname);
+      console.log("🔌 Port:", url.port);
+      console.log("🔌 Database:", url.pathname.slice(1));
+      console.log("🔌 Query params:", url.search);
+    } catch (parseError) {
+      console.error("❌ Invalid MongoDB connection string format:", parseError.message);
+      return;
+    }
+    
+    // Add connection options for better reliability
     const connectionOptions = {
       serverSelectionTimeoutMS: 15000, 
       socketTimeoutMS: 45000,
@@ -72,12 +87,19 @@ const connectDB = async () => {
       w: 'majority' // Write concern
     };
     
+    console.log("🔌 Connection options:", connectionOptions);
+    
     await mongoose.connect(mongoURL, connectionOptions);
     console.log("✅ Database Connected Successfully");
+    console.log("✅ Connection state:", mongoose.connection.readyState);
+    console.log("✅ Database name:", mongoose.connection.name);
+    console.log("✅ Host:", mongoose.connection.host);
     
     // Add connection event listeners
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err);
+      console.error('❌ Error code:', err.code);
+      console.error('❌ Error name:', err.name);
     });
     
     mongoose.connection.on('disconnected', () => {
@@ -90,8 +112,23 @@ const connectDB = async () => {
     
   } catch (err) {
     console.error("❌ Database Connection Error:", err.message);
+    console.error("❌ Error code:", err.code);
+    console.error("❌ Error name:", err.name);
     console.error("❌ Full error:", err);
+    
+    // Provide specific error messages for common issues
+    if (err.code === 'ENOTFOUND') {
+      console.error("❌ DNS resolution failed - check your cluster hostname");
+    } else if (err.code === 'ECONNREFUSED') {
+      console.error("❌ Connection refused - check network access and firewall");
+    } else if (err.code === 'ETIMEDOUT') {
+      console.error("❌ Connection timeout - check network access and firewall");
+    } else if (err.name === 'MongoServerSelectionError') {
+      console.error("❌ Server selection failed - check network access and authentication");
+    }
+    
     console.error("❌ Please check your MONGO_URL and MongoDB Atlas settings");
+    // Don't crash the server, just log the error
     console.warn("⚠️ Continuing without database connection...");
   }
 };
