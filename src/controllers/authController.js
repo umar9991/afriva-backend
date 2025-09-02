@@ -273,19 +273,33 @@ exports.verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
   
   console.log('🔍 OTP Verification Request:', { email, otp });
+  console.log('🔍 MongoDB Connection State:', mongoose.connection.readyState);
+  console.log('🔍 MONGO_URL set:', !!config.MONGO_URL);
 
   try {
+    // Make email search case-insensitive
     const existingUser = await User.findOne({ 
       email: { $regex: new RegExp(`^${email}$`, 'i') }
     }).select('+verificationCode +verificationCodeValidation');
 
     console.log('🔍 User search result:', existingUser ? 'User found' : 'User not found');
+    console.log('🔍 Search query:', { email: { $regex: new RegExp(`^${email}$`, 'i') } });
 
     if (!existingUser) {
       console.log('❌ User not found for email:', email);
+      console.log('❌ This suggests either:');
+      console.log('❌ 1. Database connection failed');
+      console.log('❌ 2. User was never created');
+      console.log('❌ 3. Email search is still case-sensitive');
+      
       return res.status(404).json({
         success: false,
         message: "User not found! Please check your email address.",
+        debug: {
+          email: email,
+          connectionState: mongoose.connection.readyState,
+          mongoUrlSet: !!config.MONGO_URL
+        }
       });
     }
 
@@ -362,6 +376,12 @@ exports.verifyOtp = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error verifying OTP:", error);
+    console.error("❌ Error details:", {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      stack: error.stack
+    });
     return res.status(500).json({
       success: false,
       message: "Internal server error",
