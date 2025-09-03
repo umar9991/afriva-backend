@@ -297,16 +297,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Enhanced connection function with proper serverless handling
+mongoose.set('bufferCommands', false);
+
 const connectDB = async () => {
   try {
-    // Check if already connected
     if (mongoose.connection.readyState === 1) {
       console.log("✅ Using existing database connection");
       return;
     }
     
-    // Check if connecting
     if (mongoose.connection.readyState === 2) {
       console.log("🔌 Database connection in progress, waiting...");
       return new Promise((resolve, reject) => {
@@ -319,7 +318,6 @@ const connectDB = async () => {
           reject(err);
         });
         
-        // Timeout after 30 seconds
         setTimeout(() => {
           reject(new Error('Database connection timeout'));
         }, 30000);
@@ -337,19 +335,18 @@ const connectDB = async () => {
     console.log("🔌 Connecting to database...");
     console.log("🔌 MongoDB URL:", mongoURL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     
-    // Enhanced connection options for serverless environment
     const connectionOptions = {
-      serverSelectionTimeoutMS: 30000,     // 30 seconds
-      socketTimeoutMS: 45000,              // 45 seconds
-      connectTimeoutMS: 30000,             // 30 seconds
+      serverSelectionTimeoutMS: 30000,     
+      socketTimeoutMS: 45000,              
+      connectTimeoutMS: 30000,             
       retryWrites: true,
       w: 'majority',
-      bufferCommands: false,               // Critical: Disable mongoose buffering
-      bufferMaxEntries: 0,                 // Critical: Disable mongoose buffering
-      maxPoolSize: 10,                     // Connection pool size
-      serverSelectionRetryDelayMS: 5000,   // Retry delay
-      heartbeatFrequencyMS: 10000,         // Heartbeat frequency
-      maxIdleTimeMS: 30000,                // Close connections after 30s of inactivity
+      bufferCommands: false,               
+      bufferMaxEntries: 0,                 
+      maxPoolSize: 10,                     
+      serverSelectionRetryDelayMS: 5000,   
+      heartbeatFrequencyMS: 10000,         
+      maxIdleTimeMS: 30000,                
     };
     
     console.log("🔌 Connection options:", connectionOptions);
@@ -358,7 +355,6 @@ const connectDB = async () => {
     console.log("✅ Database Connected Successfully");
     console.log("✅ Connection state:", mongoose.connection.readyState);
     
-    // Enhanced event handlers
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err);
     });
@@ -389,7 +385,6 @@ const connectDB = async () => {
   }
 };
 
-// Enhanced error handling
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
   if (process.env.NODE_ENV === 'production') {
@@ -408,7 +403,6 @@ process.on('unhandledRejection', (reason, promise) => {
   }
 });
 
-// Middleware to ensure database connection before handling requests
 const ensureDBConnection = async (req, res, next) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -435,7 +429,6 @@ const ensureDBConnection = async (req, res, next) => {
   }
 };
 
-// Initialize database connection
 connectDB();
 
 // Apply database connection middleware to API routes
