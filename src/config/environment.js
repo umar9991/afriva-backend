@@ -1,17 +1,12 @@
-// Environment Configuration
 const config = {
-  // Database
   MONGO_URL: process.env.MONGO_URL || 'mongodb://localhost:27017/afriva',
   
-  // JWT
   TOKEN_SECRET: process.env.TOKEN_SECRET || 'your-secret-key-change-in-production',
   
-  // Email
   NODE_CODE_SENDING_EMAIL_ADDRESS: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS || 'noreply@afriva.com',
   NODE_CODE_SENDING_EMAIL_PASSWORD: process.env.NODE_CODE_SENDING_EMAIL_PASSWORD || '',
   HMAC_VERIFICATION_CODE_SECRET: process.env.HMAC_VERIFICATION_CODE_SECRET || 'your-hmac-secret-change-in-production',
   
-  // Frontend URLs - Normalized to remove trailing slashes
   FRONTEND_URL: (() => {
     const urls = process.env.FRONTEND_URL || [
       "http://localhost:5173",
@@ -36,7 +31,6 @@ const config = {
   PORT: process.env.PORT || 8000
 };
 
-// Log configuration for debugging (only in development)
 if (config.NODE_ENV === 'development') {
   console.log('🔧 Environment Configuration:', {
     NODE_ENV: config.NODE_ENV,

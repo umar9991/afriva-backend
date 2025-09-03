@@ -1,7 +1,6 @@
 const nodemailer = require('nodemailer');
 const config = require('../config/environment');
 
-// Create transport only if email credentials are available
 let transport = null;
 
 if (config.NODE_CODE_SENDING_EMAIL_ADDRESS && config.NODE_CODE_SENDING_EMAIL_PASSWORD) {

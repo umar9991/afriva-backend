@@ -95,7 +95,6 @@ exports.signin = async (req, res) => {
       });
     }
     
-    // Make email search case-insensitive
     const existingUser = await User.findOne({ 
       email: { $regex: new RegExp(`^${email}$`, 'i') }
     }).select('+password');
@@ -131,7 +130,6 @@ exports.signin = async (req, res) => {
       expiresIn: '8h',
     });
 
-    // Set cookie for production, but handle Vercel deployment
     const cookieOptions = {
       expires: new Date(Date.now() + 8 * 3600000),
       httpOnly: config.NODE_ENV === 'production',

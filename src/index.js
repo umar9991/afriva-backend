@@ -1,4 +1,4 @@
-require("dotenv").config();
+// require("dotenv").config();
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -46,26 +46,59 @@ app.use((req, res, next) => {
   next();
 });
 
+// Enhanced connection function with proper serverless handling
 const connectDB = async () => {
   try {
+    // Check if already connected
+    if (mongoose.connection.readyState === 1) {
+      console.log("✅ Using existing database connection");
+      return;
+    }
+    
+    // Check if connecting
+    if (mongoose.connection.readyState === 2) {
+      console.log("🔌 Database connection in progress, waiting...");
+      return new Promise((resolve, reject) => {
+        mongoose.connection.once('connected', () => {
+          console.log("✅ Database connection established");
+          resolve();
+        });
+        mongoose.connection.once('error', (err) => {
+          console.error("❌ Database connection failed:", err);
+          reject(err);
+        });
+        
+        // Timeout after 30 seconds
+        setTimeout(() => {
+          reject(new Error('Database connection timeout'));
+        }, 30000);
+      });
+    }
+    
     const mongoURL = config.MONGO_URL;
     if (!mongoURL) {
       console.error('❌ MONGO_URL environment variable is not set!');
       console.error('❌ Please set MONGO_URL in your Vercel environment variables');
       console.error('❌ Example: mongodb+srv://username:password@cluster.mongodb.net/afriva');
-      return; 
+      throw new Error('MONGO_URL not configured');
     }
     
     console.log("🔌 Connecting to database...");
-    console.log("🔌 MongoDB URL:", mongoURL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials
+    console.log("🔌 MongoDB URL:", mongoURL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     
-    // Simple connection options for better reliability
+    // Enhanced connection options for serverless environment
     const connectionOptions = {
-      serverSelectionTimeoutMS: 30000, // 30 seconds
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 30000,     // 30 seconds
+      socketTimeoutMS: 45000,              // 45 seconds
+      connectTimeoutMS: 30000,             // 30 seconds
       retryWrites: true,
-      w: 'majority'
+      w: 'majority',
+      bufferCommands: false,               // Critical: Disable mongoose buffering
+      bufferMaxEntries: 0,                 // Critical: Disable mongoose buffering
+      maxPoolSize: 10,                     // Connection pool size
+      serverSelectionRetryDelayMS: 5000,   // Retry delay
+      heartbeatFrequencyMS: 10000,         // Heartbeat frequency
+      maxIdleTimeMS: 30000,                // Close connections after 30s of inactivity
     };
     
     console.log("🔌 Connection options:", connectionOptions);
@@ -74,7 +107,7 @@ const connectDB = async () => {
     console.log("✅ Database Connected Successfully");
     console.log("✅ Connection state:", mongoose.connection.readyState);
     
-    // Add connection event listeners
+    // Enhanced event handlers
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err);
     });
@@ -87,31 +120,76 @@ const connectDB = async () => {
       console.log('✅ MongoDB reconnected');
     });
     
+    mongoose.connection.on('close', () => {
+      console.log('🔌 MongoDB connection closed');
+    });
+    
   } catch (err) {
     console.error("❌ Database Connection Error:", err.message);
     console.error("❌ Error code:", err.code);
     console.error("❌ Error name:", err.name);
     
-    // Don't crash the server, just log the error
-    console.warn("⚠️ Continuing without database connection...");
+    // For serverless, we should throw the error instead of continuing
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      throw err;
+    } else {
+      console.warn("⚠️ Continuing without database connection (development mode)...");
+    }
   }
 };
 
+// Enhanced error handling
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
-  console.warn('⚠️ Server continuing...');
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  } else {
+    console.warn('⚠️ Server continuing (development mode)...');
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  console.warn('⚠️ Server continuing...');
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  } else {
+    console.warn('⚠️ Server continuing (development mode)...');
+  }
 });
 
+// Middleware to ensure database connection before handling requests
+const ensureDBConnection = async (req, res, next) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      console.log("🔌 Database not connected, attempting to connect...");
+      await connectDB();
+    }
+    
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable',
+        error: 'SERVICE_UNAVAILABLE'
+      });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('❌ Database connection middleware error:', error);
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection failed',
+      error: 'DATABASE_CONNECTION_ERROR'
+    });
+  }
+};
+
+// Initialize database connection
 connectDB();
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
+// Apply database connection middleware to API routes
+app.use("/api/auth", ensureDBConnection, authRoutes);
+app.use("/api/products", ensureDBConnection, productRoutes);
 
 app.get('/', (req, res) => {
   const dbStatus = mongoose.connection.readyState;
@@ -153,7 +231,7 @@ app.get('/', (req, res) => {
   }); 
 });
 
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
   const dbStatus = mongoose.connection.readyState;
   const dbStatusText = {
     0: 'disconnected',
@@ -162,8 +240,22 @@ app.get('/health', (req, res) => {
     3: 'disconnecting'
   }[dbStatus] || 'unknown';
   
+  // Test database connectivity
+  let dbHealth = 'unknown';
+  try {
+    if (dbStatus === 1) {
+      await mongoose.connection.db.admin().ping();
+      dbHealth = 'healthy';
+    } else {
+      dbHealth = 'unhealthy';
+    }
+  } catch (error) {
+    dbHealth = 'error';
+    console.error('Database health check failed:', error);
+  }
+  
   res.json({
-    status: dbStatus === 1 ? 'healthy' : 'unhealthy',
+    status: dbStatus === 1 && dbHealth === 'healthy' ? 'healthy' : 'unhealthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
@@ -171,12 +263,14 @@ app.get('/health', (req, res) => {
       status: dbStatusText,
       readyState: dbStatus,
       connected: dbStatus === 1,
+      health: dbHealth,
       host: mongoose.connection.host || 'unknown',
       name: mongoose.connection.name || 'unknown'
     },
     environment: {
       NODE_ENV: config.NODE_ENV,
-      MONGO_URL: config.MONGO_URL ? 'Set' : 'Not Set'
+      MONGO_URL: config.MONGO_URL ? 'Set' : 'Not Set',
+      VERCEL: process.env.VERCEL ? 'true' : 'false'
     }
   });
 });
@@ -198,7 +292,6 @@ app.use((req, res) => {
   });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   
@@ -216,6 +309,15 @@ app.use((err, req, res, next) => {
     });
   }
   
+  // Handle database timeout errors specifically
+  if (err.name === 'MongooseError' && err.message.includes('buffering timed out')) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection timeout',
+      error: 'DATABASE_TIMEOUT'
+    });
+  }
+  
   res.status(500).json({
     success: false,
     message: 'Internal server error',
@@ -223,10 +325,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// For Vercel deployment - export the app
 module.exports = app;
 
-// Only start server if not on Vercel (for local development)
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   const PORT = config.PORT || 8000;
   
@@ -240,16 +340,20 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   process.on('SIGTERM', () => {
     console.log('SIGTERM received, shutting down gracefully');
     server.close(() => {
-      console.log('Process terminated');
-      process.exit(0);
+      mongoose.connection.close(() => {
+        console.log('Database connection closed');
+        process.exit(0);
+      });
     });
   });
 
   process.on('SIGINT', () => {
     console.log('SIGINT received, shutting down gracefully');
     server.close(() => {
-      console.log('Process terminated');
-      process.exit(0);
+      mongoose.connection.close(() => {
+        console.log('Database connection closed');
+        process.exit(0);
+      });
     });
   });
 }
